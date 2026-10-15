@@ -6,7 +6,7 @@ import sys
 
 from . import __version__
 from .engine import Limits
-from .worker import isolated_scan
+from .worker import isolated_scan_file
 
 
 def main(argv=None):
@@ -26,11 +26,9 @@ def main(argv=None):
     try:
         if args.file.is_symlink() or not args.file.is_file():
             raise ValueError("Choose a regular file, not a directory or symbolic link.")
-        with args.file.open("rb") as stream:
-            data = stream.read(Limits().input_bytes+1)
-        if len(data) > Limits().input_bytes:
-            raise ValueError("Input exceeds the 20 MiB limit.")
-        report = isolated_scan(data, args.file.name)
+        if args.file.stat().st_size > Limits().input_bytes:
+            raise ValueError("Input exceeds the 512 MiB limit.")
+        report = isolated_scan_file(args.file, args.file.name)
         encoded = json.dumps(report, indent=2, ensure_ascii=True) + "\n"
         if args.output:
             with args.output.open("x", encoding="utf-8") as stream:

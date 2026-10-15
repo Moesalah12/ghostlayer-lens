@@ -20,7 +20,7 @@ from . import __version__
 
 @dataclass(frozen=True)
 class Limits:
-    input_bytes: int = 20 * 1024 * 1024
+    input_bytes: int = 512 * 1024 * 1024
     member_bytes: int = 2 * 1024 * 1024
     expanded_bytes: int = 32 * 1024 * 1024
     entries: int = 500
@@ -186,7 +186,7 @@ class Inspector:
     def archive(self, node, data, depth):
         local_gaps = False
         try:
-            with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            with zipfile.ZipFile(io.BytesIO(data) if isinstance(data, bytes) else data) as archive:
                 members = archive.infolist()
                 node["declared_entry_count"] = len(members)
                 names = set()
@@ -242,12 +242,16 @@ class Inspector:
 def scan_bytes(data, name="input", limits=None):
     limits = limits or Limits()
     if len(data) > limits.input_bytes:
-        raise ValueError("Input exceeds the 20 MiB limit." if limits.input_bytes == 20*1024*1024 else "Input exceeds the configured limit.")
+        raise ValueError("Input exceeds the configured limit.")
     if not isinstance(name, str) or not name or len(name) > 1000:
         raise ValueError("Filename must contain 1–1000 characters.")
     inspector = Inspector(limits)
     root = inspector.node(name, len(data))
     inspector.inspect(root, data, name)
+    return make_report(inspector, limits)
+
+
+def make_report(inspector, limits):
     attention = any(item["severity"] in {"high", "medium"} for item in inspector.findings)
     return {"schema_version": 1, "engine_version": __version__,
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -258,3 +262,36 @@ def scan_bytes(data, name="input", limits=None):
             "stats": {"nodes": len(inspector.nodes), "findings": len(inspector.findings),
                       "decompressed_bytes": inspector.expanded},
             "nodes": inspector.nodes, "findings": inspector.findings}
+
+
+def scan_file(path, name="input", limits=None):
+    """Hash in chunks; inspect ZIPs on disk and bound other content reads."""
+    limits = limits or Limits()
+    if not isinstance(name, str) or not name or len(name) > 1000:
+        raise ValueError("Filename must contain 1–1000 characters.")
+    inspector = Inspector(limits)
+    digest = hashlib.sha256()
+    size = 0
+    with open(path, "rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            size += len(chunk)
+            if size > limits.input_bytes:
+                raise ValueError("Input exceeds the configured limit.")
+            digest.update(chunk)
+            if inspector.expired():
+                raise ValueError("File reading exceeded the inspection time budget.")
+        root = inspector.node(name, size)
+        root["sha256"] = digest.hexdigest()
+        stream.seek(0)
+        prefix = stream.read(64)
+        stream.seek(0)
+        if suffix(name) == ".zip" or prefix.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")):
+            root["kind"] = "zip"
+            inspector.archive(root, stream, 0)
+        elif size > limits.member_bytes:
+            root["kind"] = "windows_binary" if prefix.startswith(b"MZ") else "unsupported"
+            inspector.limits_hit.add("member_bytes")
+            inspector.gap(root, "content_size_limit", "File was hashed, but content exceeds the 2 MiB text inspection limit. Full content was not analyzed.")
+        else:
+            inspector.inspect(root, stream.read(limits.member_bytes + 1), name)
+    return make_report(inspector, limits)

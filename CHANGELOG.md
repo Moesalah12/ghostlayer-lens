@@ -1,3 +1,11 @@
+# 0.2.0
+
+- Stream browser uploads to temporary disk storage; accept inputs up to 512 MiB.
+- Read ZIP inputs from disk with existing bounded content inspection.
+- Hash large non-ZIP files and report their content as uninspected.
+- Preserve local session keys across refreshes in tab-scoped storage.
+- Remove temporary upload files after normal success and failure.
+
 # Changelog
 
 ## 0.1.1 — documentation update

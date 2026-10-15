@@ -17,12 +17,12 @@ A person explicitly selects one untrusted download for static, local triage. The
 
 - Process separation is not a hardened sandbox. A vulnerability in Python, zlib, the browser, or Lens could have security impact. Use a disposable VM for high-risk unknown samples. Keep the operating system and Python patched.
 - The app runs under the operator's account. A parser exploit could inherit its access. The worker has no seccomp, namespace, Job Object, capability, or network-denial sandbox. Normal code makes no external requests, but that is not a containment guarantee after exploitation.
-- A local malicious process can interfere with local apps; the browser key is not protection against an already-compromised host. Keep the startup URL private. Refreshing loses the in-memory key.
+- A local malicious process can interfere with local apps; the browser key is not protection against an already-compromised host. Keep the startup URL private. The key persists across refreshes in tab-scoped session storage.
 - A slow connection can occupy the single-request server until the socket timeout; it is not a multi-user production service. Never expose the port or place it behind a public tunnel/reverse proxy.
 - Lexical rules can match comments, strings, harmless administration, or documentation. They can miss aliases, concatenation, complex encodings, non-UTF text, novel behavior, and semantic context. PowerShell Base64 decoding is bounded and not recursive.
 - Filesystem/thumbnail preview outside Lens may process files independently. Lens cannot prevent that. It does not quarantine, delete, repair, block, or neutralize files.
 - Static input size and decompression limits can exclude important evidence. A worker crash or timeout yields no completed report rather than a clean result.
-- Original files remain where the user put them. Selected bytes and reports exist in process/browser memory. Lens makes no secure-memory erasure guarantee; OS swap/crash dumps can retain data. Downloads are controlled by the browser.
+- Original files remain where the user put them. Browser uploads are streamed to a temporary local directory, removed after successful or failed inspection during normal operation. Abrupt process termination may leave temporary files. Reports exist in process/browser memory. Lens makes no secure-memory erasure guarantee; OS swap/crash dumps can retain data. Downloads are controlled by the browser.
 
 ## Reporting
 
@@ -32,3 +32,5 @@ Send sanitized vulnerability reports privately as described in SECURITY.md. Do n
 
 - [Python ZIP decompression pitfalls](https://docs.python.org/3.11/library/zipfile.html#decompression-pitfalls)
 - [Python security considerations](https://docs.python.org/3/library/security_warnings.html)
+
+Large ZIP inputs are read from disk. Non-ZIP files above 2 MiB are hashed and explicitly reported as uninspected content. The 512 MiB input allowance does not expand the 2 MiB per-entry or 32 MiB total decompression budgets. Temporary upload storage is not secure erasure.

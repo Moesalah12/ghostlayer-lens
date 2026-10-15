@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 import secrets
 import socket
+import tempfile
+import time
 from urllib.parse import unquote
 import webbrowser
 
 from .engine import Limits
-from .worker import isolated_scan
+from .worker import isolated_scan_file
 
 ASSETS = Path(__file__).parent / "web"
 
@@ -79,20 +81,32 @@ def make_server(port=0, token=None):
             if length < 0:
                 return self.output(411, {"error": "Content length required."})
             if length > Limits().input_bytes:
-                return self.output(413, {"error": "File exceeds the 20 MiB input limit."})
+                return self.output(413, {"error": "File exceeds the 512 MiB input limit."})
             name = unquote(self.headers.get("X-Lens-Filename", "input"))
             if not name or len(name) > 1000:
                 return self.output(400, {"error": "Invalid filename."})
             try:
-                data = self.rfile.read(length)
-                if len(data) != length:
-                    return self.output(400, {"error": "Incomplete upload."})
-                report = isolated_scan(data, name)
+                with tempfile.TemporaryDirectory(prefix="ghostlayer-lens-") as directory:
+                    path = Path(directory) / "input"
+                    remaining = length
+                    deadline = time.monotonic() + 120
+                    with path.open("wb") as target:
+                        while remaining:
+                            if time.monotonic() > deadline:
+                                raise socket.timeout()
+                            chunk = self.rfile.read(min(1024 * 1024, remaining))
+                            if not chunk:
+                                return self.output(400, {"error": "Incomplete upload."})
+                            target.write(chunk)
+                            remaining -= len(chunk)
+                    report = isolated_scan_file(path, name)
                 return self.output(200, report)
             except (RuntimeError, ValueError) as exc:
                 return self.output(422, {"error": str(exc)})
             except (socket.timeout, ConnectionError):
                 return self.output(408, {"error": "Upload did not finish within the connection timeout."})
+            except OSError:
+                return self.output(507, {"error": "Local temporary storage is unavailable or full."})
 
     server = HTTPServer(("127.0.0.1", port), Handler)
     return server, token
@@ -103,7 +117,7 @@ def serve_app(port=0, open_browser=True):
     url = f"http://127.0.0.1:{server.server_port}/#key={token}"
     print("GhostLayer Lens 0.1 — local-only inspection app")
     print(url, flush=True)
-    print("Keep this startup URL private. Ctrl+C stops the app. No files are saved unless you export a report.")
+    print("Keep this startup URL private. Ctrl+C stops the app. Uploads use temporary local storage, removed after inspection. Reports are saved only when exported.")
     if open_browser:
         webbrowser.open(url)
     try:

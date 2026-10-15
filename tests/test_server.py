@@ -32,6 +32,32 @@ class ServerTests(unittest.TestCase):
         return {"Origin": f"http://127.0.0.1:{self.port}", "X-Lens-Token": self.token,
                 "Content-Type": "application/octet-stream", "X-Lens-Filename": "note.txt"}
 
+    def test_large_upload_and_temporary_cleanup(self):
+        from pathlib import Path
+        from unittest.mock import patch
+        from lens.worker import isolated_scan_file
+        observed = []
+        def track(path, name):
+            observed.append(Path(path))
+            return isolated_scan_file(path, name)
+        with patch("lens.server.isolated_scan_file", side_effect=track):
+            status, _, body = self.request("POST", "/api/scan", b"a" * (21*1024*1024), self.valid())
+        self.assertEqual(status, 200)
+        self.assertIn(b"content_size_limit", body)
+        self.assertTrue(observed)
+        self.assertFalse(observed[0].exists())
+
+    def test_temporary_cleanup_after_worker_error(self):
+        from pathlib import Path
+        from unittest.mock import patch
+        observed = []
+        def fail(path, name):
+            observed.append(Path(path))
+            raise RuntimeError("Inspection interrupted")
+        with patch("lens.server.isolated_scan_file", side_effect=fail):
+            self.assertEqual(self.request("POST", "/api/scan", b"hello", self.valid())[0], 422)
+        self.assertFalse(observed[0].exists())
+
     def test_loopback_binding(self):
         self.assertEqual(self.server.server_address[0], "127.0.0.1")
 
@@ -62,7 +88,7 @@ class ServerTests(unittest.TestCase):
 
     def test_oversized_input_rejected_before_read(self):
         headers = self.valid()
-        headers["Content-Length"] = str(21*1024*1024)
+        headers["Content-Length"] = str(513*1024*1024)
         self.assertEqual(self.request("POST", "/api/scan", b"", headers)[0], 413)
 
     def test_content_type_validation(self):

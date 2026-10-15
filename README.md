@@ -3,7 +3,7 @@
 <p align="center">Local ZIP and script inspection with readable evidence and explicit coverage gaps.</p>
 <p align="center"><a href="https://github.com/Moesalah12/ghostlayer-lens/actions/workflows/tests.yml">Tests</a> · <a href="docs/THREAT-MODEL.md">Threat model</a> · <a href="docs/RULES.md">Detection rules</a> · <a href="docs/ROADMAP.md">Roadmap</a></p>
 
-**Early release · v0.1.1.** Lens is a static inspection and triage tool. It does not certify files as safe, replace antivirus, execute samples, or prove that a matched command will run. It has not received an independent security audit.
+**Early release · v0.2.0.** Lens is a static inspection and triage tool. It does not certify files as safe, replace antivirus, execute samples, or prove that a matched command will run. It has not received an independent security audit.
 
 ## What it does
 
@@ -31,7 +31,7 @@ python -m lens serve
 
 On Windows, `py -3 -m lens serve` also works. Or double-click **start-lens.cmd** in the extracted folder. Keep the terminal open. Ctrl+C stops the app.
 
-The app opens at a random `127.0.0.1` port with a per-session key in the startup URL fragment. That key is removed from the address bar after loading and kept only in page memory. Refreshing loses it; reopen the full startup URL from the terminal. Keep that URL private. The app binds only to loopback, checks Host/Origin, and requires the key for scans. **Do not expose or reverse-proxy this server.**
+The app opens at a random `127.0.0.1` port with a per-session key in the startup URL fragment. That key is removed from the address bar after loading and kept in tab-scoped session storage so refreshing works. New tabs may require the full startup URL from the terminal. Keep that URL private. The app binds only to loopback, checks Host/Origin, and requires the key for scans. **Do not expose or reverse-proxy this server.**
 
 Click **Inspect the training ZIP** for a real scan of a harmless, in-memory fixture. Its script examples are comments and are deliberately flagged as lexical evidence. It contains a fictional `MZ` marker fixture, not a valid executable or real malware. Demo results come from the same engine as ordinary uploads.
 
@@ -64,7 +64,7 @@ The generator creates only fictional training data and refuses to overwrite an e
 
 | Budget | Default |
 | --- | --- |
-| Input | 20 MiB |
+| Input | 512 MiB |
 | Content per ZIP entry | 2 MiB |
 | Total decompressed bytes, including nesting | 32 MiB |
 | Inventory nodes, including root | 500 |
@@ -87,3 +87,5 @@ A legitimate installer may request administrator privileges. Documentation can c
 Useful contributions include failing regression tests, sanitized false-positive examples, archive edge cases, accessibility improvements, and independently reviewed parsers. [CONTRIBUTING.md](CONTRIBUTING.md) explains the process. Never attach live malware or private evidence to public issues. Private reports: [SECURITY.md](SECURITY.md).
 
 Created for **Mohammad Salah, Founder & CEO of GhostLayer Defense**. This release is not a customer deployment, independent audit, or claim of universal malware detection. MIT licensed. Third-party names in the documentation do not imply endorsement.
+
+Large ZIP inputs are read from disk. Non-ZIP files above 2 MiB are hashed and explicitly reported as uninspected content. The 512 MiB input allowance does not expand the 2 MiB per-entry or 32 MiB total decompression budgets. Temporary upload storage is not secure erasure.

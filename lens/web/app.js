@@ -1,6 +1,13 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const key = new URLSearchParams(location.hash.slice(1)).get('key') || '';
+function sessionKey() {
+  const supplied = new URLSearchParams(location.hash.slice(1)).get('key');
+  try {
+    if (supplied) sessionStorage.setItem('lens-session-key', supplied);
+    return supplied || sessionStorage.getItem('lens-session-key') || '';
+  } catch { return supplied || ''; }
+}
+const key = sessionKey();
 history.replaceState(null, '', location.pathname);
 let selectedFile = null, currentReport = null, selectedNode = null, busy = false;
 const bytes = value => value < 1024 ? `${value} B` : value < 1048576 ? `${(value/1024).toFixed(1)} KiB` : `${(value/1048576).toFixed(1)} MiB`;
@@ -10,8 +17,8 @@ function choose(file) {
   selectedFile = file;
   $('selected').hidden = false;
   $('selected').textContent = `${file.name} · ${bytes(file.size)}`;
-  $('scan').disabled = file.size > 20*1024*1024 || !key;
-  $('message').textContent = file.size > 20*1024*1024 ? 'This file exceeds the 20 MiB inspection limit. Choose a smaller file.' : '';
+  $('scan').disabled = file.size > 512*1024*1024 || !key;
+  $('message').textContent = file.size > 512*1024*1024 ? 'This file exceeds the 512 MiB inspection limit. Choose a smaller file.' : '';
 }
 $('file').addEventListener('change', e => choose(e.target.files[0]));
 for (const event of ['dragenter','dragover']) $('dropzone').addEventListener(event, e => { e.preventDefault(); $('dropzone').classList.add('drag'); });
@@ -22,14 +29,14 @@ document.addEventListener('drop', e => e.preventDefault());
 $('scan').addEventListener('click', () => selectedFile && inspect(selectedFile));
 $('filter').addEventListener('change', renderEvidence);
 $('all').addEventListener('click', () => { selectedNode = null; renderTree(); renderEvidence(); });
-function setBusy(value) { busy=value; $('scan').disabled=value || !selectedFile || selectedFile.size>20*1024*1024 || !key; $('demo').disabled=value || !key; $('file').disabled=value; }
+function setBusy(value) { busy=value; $('scan').disabled=value || !selectedFile || selectedFile.size>512*1024*1024 || !key; $('demo').disabled=value || !key; $('file').disabled=value; }
 async function inspect(file) {
   if (busy) return;
   currentReport = null; selectedNode = null;
   $('report').hidden = true; $('empty').hidden = true; $('export').hidden = true; $('summary-export').hidden = true;
   $('message').textContent = 'Inspecting locally… Reading supported content without executing it.';
   setBusy(true);
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 25000);
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 150000);
   try {
     const response = await fetch('/api/scan', {method:'POST', headers:{'Content-Type':'application/octet-stream','X-Lens-Token':key,'X-Lens-Filename':encodeURIComponent(file.name)}, body:file, signal:controller.signal});
     const result = await response.json();

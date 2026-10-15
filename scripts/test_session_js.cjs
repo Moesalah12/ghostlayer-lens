@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../lens/web/app.js'), 'utf8');
+const code = source.slice(source.indexOf('function sessionKey()'), source.indexOf('const key = sessionKey();'));
+const values = new Map();
+const context = vm.createContext({URLSearchParams, location: {hash:'#key=first'}, sessionStorage:{setItem:(k,v)=>values.set(k,v), getItem:k=>values.get(k)}});
+vm.runInContext(code, context);
+assert.equal(vm.runInContext('sessionKey()', context), 'first');
+context.location.hash='';
+assert.equal(vm.runInContext('sessionKey()', context), 'first');
+context.location.hash='#key=new-server';
+assert.equal(vm.runInContext('sessionKey()', context), 'new-server');
+context.sessionStorage={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};
+assert.equal(vm.runInContext('sessionKey()', context), 'new-server');
+context.location.hash='';
+assert.equal(vm.runInContext('sessionKey()', context), '');
+console.log('Session tests passed: refresh, replacement, and blocked storage fallback.');

@@ -7,12 +7,20 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 
 def isolated_scan(data, name):
+    with tempfile.TemporaryDirectory(prefix="ghostlayer-lens-") as directory:
+        path = Path(directory) / "input"
+        path.write_bytes(data)
+        return isolated_scan_file(path, name)
+
+
+def isolated_scan_file(path, name):
     root = Path(__file__).resolve().parent.parent
     try:
-        result = subprocess.run([sys.executable, "-m", "lens.worker", name], input=data,
+        result = subprocess.run([sys.executable, "-m", "lens.worker", name, str(Path(path).resolve())],
                                 capture_output=True, timeout=15, cwd=root)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError("Inspection exceeded 15 seconds; no complete report was produced.") from exc
@@ -31,13 +39,12 @@ def main():
         resource.setrlimit(resource.RLIMIT_CPU, (12, 12))
     except (ImportError, ValueError, OSError):
         pass
-    from .engine import Limits, scan_bytes
-    data = sys.stdin.buffer.read(Limits().input_bytes+1)
+    from .engine import scan_file
     try:
-        report = scan_bytes(data, sys.argv[1])
+        report = scan_file(sys.argv[2], sys.argv[1])
         sys.stdout.write(json.dumps(report, ensure_ascii=True))
         return 0
-    except (ValueError, MemoryError, RecursionError):
+    except (OSError, ValueError, MemoryError, RecursionError):
         return 2
 
 
