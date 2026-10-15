@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 — documentation update
+
+- Updated public documentation and distribution metadata. Inspection behavior is unchanged.
+
 ## 0.1.0 — early evaluation release
 
 - Local visual app and command-line inspection.

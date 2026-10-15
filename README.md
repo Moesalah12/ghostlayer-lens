@@ -3,7 +3,7 @@
 <p align="center">Local ZIP and script inspection with readable evidence and explicit coverage gaps.</p>
 <p align="center"><a href="https://github.com/Moesalah12/ghostlayer-lens/actions/workflows/tests.yml">Tests</a> · <a href="docs/THREAT-MODEL.md">Threat model</a> · <a href="docs/RULES.md">Detection rules</a> · <a href="docs/ROADMAP.md">Roadmap</a></p>
 
-**Early release · v0.1.0.** Lens is a static inspection and triage tool. It does not certify files as safe, replace antivirus, execute samples, or prove that a matched command will run. It has not received an independent security audit.
+**Early release · v0.1.1.** Lens is a static inspection and triage tool. It does not certify files as safe, replace antivirus, execute samples, or prove that a matched command will run. It has not received an independent security audit.
 
 ## What it does
 
