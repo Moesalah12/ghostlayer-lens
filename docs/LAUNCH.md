@@ -14,7 +14,7 @@ This is an early static-analysis release, not an antivirus replacement or a guar
 
 Source and instructions: https://github.com/Moesalah12/ghostlayer-lens
 
-Built by Mohammad Salah / GhostLayer Defense with AI development assistance.
+Built by Mohammad Salah / GhostLayer Defense.
 
 ## 45-second demonstration outline
 
