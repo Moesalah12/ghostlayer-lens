@@ -86,4 +86,4 @@ A legitimate installer may request administrator privileges. Documentation can c
 
 Useful contributions include failing regression tests, sanitized false-positive examples, archive edge cases, accessibility improvements, and independently reviewed parsers. [CONTRIBUTING.md](CONTRIBUTING.md) explains the process. Never attach live malware or private evidence to public issues. Private reports: [SECURITY.md](SECURITY.md).
 
-Created for **Mohammad Salah, Founder & CEO of GhostLayer Defense**. Implementation and documentation developed with OpenAI Codex assistance. This release is not a customer deployment, independent audit, or claim of universal malware detection. MIT licensed. Third-party names in the documentation do not imply endorsement.
+Created for **Mohammad Salah, Founder & CEO of GhostLayer Defense**. This release is not a customer deployment, independent audit, or claim of universal malware detection. MIT licensed. Third-party names in the documentation do not imply endorsement.
