@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+build/
+dist/
+*.egg-info/
+examples/*.zip
+examples-js.zip
+reports/
+qa/

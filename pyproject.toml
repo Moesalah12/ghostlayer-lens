@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ghostlayer-lens"
+version = "0.1.0"
+description = "Local ZIP and script inspection with readable evidence and explicit coverage gaps"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Mohammad Salah"}]
+dependencies = []
+
+[project.scripts]
+ghostlayer-lens = "lens.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["lens*"]
+
+[tool.setuptools.package-data]
+lens = ["web/*.html", "web/*.css", "web/*.js"]

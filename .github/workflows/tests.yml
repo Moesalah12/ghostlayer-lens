@@ -1,0 +1,39 @@
+name: Tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.11', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m unittest discover -s tests -v
+      - run: node --check lens/web/app.js
+      - run: node scripts/test_demo_js.cjs examples-js.zip
+      - run: python scripts/verify_demo.py examples-js.zip
+      - run: python scripts/make_demo.py
+      - run: python scripts/verify_demo.py
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip wheel . --no-deps --wheel-dir dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghostlayer-lens-python-wheel
+          path: dist/*.whl
